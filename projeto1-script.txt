@@ -1,0 +1,293 @@
+mydf <- read.table("household_power_consumption.txt", sep = ";", header = TRUE,  stringsAsFactors = FALSE)
+
+mydf$Date <- strptime(mydf$Date, "%d/%m/%Y")
+
+mydf$Date <- as.Date(mydf$Date)
+
+
+
+mydfsub <- subset(mydf, Date >= "2007-02-01" & Date <= "2007-02-02")
+
+mydfsub$Voltage <- as.numeric(mydfsub$Voltage)
+mydfsub$Global_active_power <- as.numeric(mydfsub$Global_active_power)
+mydfsub$Global_reactive_power <- as.numeric(mydfsub$Global_reactive_power)
+mydfsub$Global_intensity <- as.numeric(mydfsub$Global_intensity)
+mydfsub$Sub_metering_1 <- as.numeric(mydfsub$Sub_metering_1)
+mydfsub$Sub_metering_2 <- as.numeric(mydfsub$Sub_metering_2)
+mydfsub$Sub_metering_3 <- as.numeric(mydfsub$Sub_metering_3)
+
+
+## Converting dates
+ datetime <- paste(as.Date(mydfsub$Date), mydfsub$Time)
+ mydfsub$Datetime <- as.POSIXct(datetime)
+
+
+## plot 1
+hist(mydfsub$Global_active_power, xlab = "Global Active Power (kilowatts)", col ="red", main = "Global Active Power")
+
+## plot 2
+plot(mydfsub$Datetime, mydfsub$Global_active_power, type="l", xlab="", ylab="Global Active Power (kilowatts)")
+
+plot(mydfsub$Datetime, mydfsub$Sub_metering_1,  type="l", xlab="", ylab="Global Active Power (kilowatts)")
+
+## Plot 3
+with(mydfsub, {
+    plot(Sub_metering_1~Datetime,  type="l", xlab="", ylab="Energy sub metering")
+    lines(Sub_metering_2~Datetime,col='Red')
+    lines(Sub_metering_3~Datetime,col='Blue')
+    legend("topright", c("Sub_metering_1", "Sub_metering_2", "Sub_metering_3"), lty=, lwd=2.5, col=c("black", "red", "blue"), bty="o")  
+
+})
+
+
+
+
+## plot 4
+par(mfrow=c(2,2), mar=c(4,4,2,1), oma=c(0,0,2,0))
+with(mydfsub, {
+    plot(Global_active_power~Datetime, type="l", ylab="Global Active Power (kilowatts)", xlab="")
+    plot(Voltage~Datetime, type="l", ylab="Voltage (volt)", xlab="Datetime")
+    plot(Sub_metering_1~Datetime, type="l", ylab="Energy sub metering", xlab="")
+    lines(Sub_metering_2~Datetime,col='Red')
+    lines(Sub_metering_3~Datetime,col='Blue')
+    
+    legend("topright", c("Sub_metering_1", "Sub_metering_2", "Sub_metering_3"), lty=, lwd=2.5, col=c("black", "red", "blue"), bty="o") 
+    plot(Global_reactive_power~Datetime, type="l", ylab="Global Reactive Power (kilowatts)",xlab="Datetime")
+})
+
+
+
+
+
+
+
+
+
+
+
+## project 2
+
+#install.packages("SQLdf.R","http://sqldf.googlecode.com/svn/trunk/R/sqldf.R")
+
+install.packages("sqldf")
+library("sqldf")
+
+df <- read.csv.sql(NEI, sql = "select * from file where fips = 24510 and year between 1999-01-01 and 2009-01-01 ")
+
+
+setwd("C:/Users/Gu-Work/Desktop/repos/exdata-data-NEI_data")
+
+
+ install.packages('ProjectTemplate')
+ library('ProjectTemplate') 
+
+ library("RSQLite", lib.loc="~/R/win-library/3.1")
+ library("RMySQL", lib.loc="~/R/win-library/3.1")
+ library("ggplot2", lib.loc="~/R/win-library/3.1")
+ library("dplyr", lib.loc="~/R/win-library/3.1")
+ library("DBI", lib.loc="~/R/win-library/3.1")
+
+
+ NEI <- readRDS("summarySCC_PM25.rds")
+ SCC <- readRDS("Source_Classification_Code.rds")
+ subset <- NEI[NEI$fips == "24510", ] 
+
+
+# 1
+ barplot(tapply(NEI$Emissions,NEI$year,sum),xlab="year",ylab="emissions")
+
+## ou
+
+#totalEmissions <- aggregate(NEI$Emissions, list(NEI$year), FUN = "sum")
+#plot(totalEmissions, type = "l", xlab = "Year", main = "Total Emissions in the United States from 1999 to 2008", ylab = expression('Total PM'[2.5]*" Emission"))
+
+
+# 2
+barplot(tapply(NEI$Emissions[NEI$fips==24510],NEI$year[NEI$fips==24510],sum),xlab="year",ylab="emissions in Baltimore City")
+ 
+
+## ou
+
+subset <- NEI[NEI$fips == "24510", ] 
+
+
+#par("mar"=c(5.1, 4.5, 4.1, 2.1))
+#png(filename = "./figure/plot2.png", 
+#    width = 480, height = 480, 
+#    units = "px")
+totalEmissions <- aggregate(subset$Emissions, list(subset$year), FUN = "sum")
+# options(scipen=0)
+# options(scipen=999)
+plot(totalEmissions, type = "l", xlab = "Year", 
+     main = "Total Emissions in Baltimore City from 1999 to 2008", 
+     ylab = expression('Total PM'[2.5]*" Emission"))
+
+
+# 3
+
+Of the four types of sources indicated by the type (point, nonpoint, onroad, nonroad) variable, which of these four sources have seen decreases
+in emissions from 1999–2008 for Baltimore City? Which have seen increases in emissions from 1999–2008? Use the ggplot2 plotting system to make 
+a plot answer this question.
+
+
+ install.packages("ggplot2")
+
+ library("ggplot2")
+
+ 
+ subset <- NEI[NEI$fips == "24510", ] 
+
+
+  g <- ggplot(subset, aes(year, Emissions, color = type))
+ g + geom_point() + facet_grid(. ~ type) + geom_line(stat = "summary", fun.y = "sum") 
+
+
+
+# g + geom_point() + facet_grid(. ~ type) + geom_smooth(method = "lm")
+
+
+# mean(subset$Emissions[subset$year=="1999"])
+
+
+ subnr <- subset[subset$type == "NON-ROAD", ] 
+ 
+ 
+# a <- ggplot(subnr, aes(year, Emissions))
+# a + geom_point()
+# subnr99 <- subset[subset$year == "1999", ] 
+ 
+
+# mean(subnr99$Emissions)
+# [1] 10.23181
+# subnr2002 <- subset[subset$year == "2002", ] 
+ 
+# subnr2005 <- subset[subset$year == "2005", ] 
+ 
+# subnr2008 <- subset[subset$year == "2008", ] 
+ 
+# mean(subnr2002$Emissions)
+# [1] 4.586758
+# mean(subnr2005$Emissions)
+# [1] 5.703605
+# mean(subnr2008$Emissions)
+# [1] 2.664208
+
+
+### ou
+
+
+ aggregatedTotalByYearAndType <- aggregate(Emissions ~ year + type, subset, sum)
+ 
+ windows()
+ g <- ggplot(aggregatedTotalByYearAndType, aes(year, Emissions, color = type))
+ g <- g + geom_line() +
+     xlab("year") +
+     ylab(expression('Total PM'[2.5]*" Emissions")) +
+     ggtitle('Total Emissions in Baltimore City, Maryland (fips == "24510") from 1999 to 2008')
+ print(g)
+
+
+
+# 4 -  Across the United States, how have emissions from coal combustion-related sources changed from 1999–2008?
+
+head(sccData$Short.Name)
+
+
+par("mar"=c(5.1, 4.5, 4.1, 2.1))
+png(filename = "./figure/plot4.png", 
+    width = 480, height = 480, 
+    units = "px")
+coal <- grep("coal", sccData$Short.Name, ignore.case = T)
+coal <- sccData[coal, ]
+coal <- neiData[neiData$SCC %in% coal$SCC, ]
+
+coalEmissions <- aggregate(coal$Emissions, list(coal$year), FUN = "sum")
+
+plot(coalEmissions, type = "l", xlab = "Year", 
+     main = "Total Emissions From Coal Combustion-related\n Sources from 1999 to 2008", 
+     ylab = expression('Total PM'[2.5]*" Emission"))
+
+dev.off()
+
+
+###   ou
+
+# merge the two data sets 
+if(!exists("NEISCC")){
+  NEISCC <- merge(NEI, SCC, by="SCC")
+}
+
+library(ggplot2)
+
+# Across the United States, how have emissions from coal combustion-related sources changed from 1999-2008?
+
+# fetch all NEIxSCC records with Short.Name (SCC) Coal
+coalMatches  <- grepl("coal", NEISCC$Short.Name, ignore.case=TRUE)
+subsetNEISCC <- NEISCC[coalMatches, ]
+
+aggregatedTotalByYear <- aggregate(Emissions ~ year, subsetNEISCC, sum)
+
+
+
+png("plot4.png", width=640, height=480)
+g <- ggplot(aggregatedTotalByYear, aes(factor(year), Emissions))
+g <- g + geom_bar(stat="identity") +
+  xlab("year") +
+  ylab(expression('Total PM'[2.5]*" Emissions")) +
+  ggtitle('Total Emissions from coal sources from 1999 to 2008')
+print(g)
+dev.off()
+
+
+
+
+
+
+
+
+
+
+> mean(subset$Emissions[subset$year=="1999" & subset$type=="NON-ROAD"])
+[1] 5.810444
+> View(subset)
+> mean(subset$Emissions[subset$year=="2002" & subset$type=="NON-ROAD"])
+[1] 2.169792
+> mean(subset$Emissions[subset$year=="2005" & subset$type=="NON-ROAD"])
+[1] 2.242646
+> mean(subset$Emissions[subset$year=="2008" & subset$type=="NON-ROAD"])
+[1] 0.536765
+> View(subset)
+> g + geom_point()
+> a + geom_point()
+> g + geom_point() + facet_grid(. ~ type) + geom_smooth(method = "lm")
+> mean(subset$Emissions[subset$year=="1999" & subset$type=="NONPOINT"])
+[1] 84.305
+> mean(subset$Emissions[subset$year=="2002" & subset$type=="NONPOINT"])
+[1] 41.93056
+> mean(subset$Emissions[subset$year=="2005" & subset$type=="NONPOINT"])
+[1] 41.93056
+> mean(subset$Emissions[subset$year=="2008" & subset$type=="NONPOINT"])
+[1] 30.51572
+> np2002 <- subset$Emissions[subset$year=="2002" & subset$type=="NONPOINT"]
+> View(subnr2008)
+> np2002
+ [1]  40.64 159.78   0.92   2.03  12.95   0.73   1.78   0.01   1.30
+[10]  57.14  25.89 242.87  83.55   1.61  26.06  24.77 143.04  28.14
+[19]   2.92  18.13   0.00   0.00 215.35   0.00 347.59   0.00  13.48
+[28]  10.17   2.46   8.98   0.67   0.35  10.20  22.82   3.11   0.06
+> np2005 <- subset$Emissions[subset$year=="2005" & subset$type=="NONPOINT"]
+> np2005
+ [1] 242.87  83.55   0.00  57.14   1.30 347.59   2.46   0.73  12.95
+[10]  26.06  24.77   1.78  13.48   0.00   2.03   3.11   0.67   0.92
+[19] 159.78  28.14 215.35  25.89  10.20 143.04   8.98   0.00   1.61
+[28]   0.01  22.82  18.13   2.92   0.06   0.00   0.35  10.17  40.64
+> sum(np2005)
+[1] 1509.5
+> sum(np2002)
+[1] 1509.5
+> np1999 <- subset$Emissions[subset$year=="1999" & subset$type=="NONPOINT"]
+> sum(np1999)
+[1] 2107.625
+> np2008 <- subset$Emissions[subset$year=="2008" & subset$type=="NONPOINT"]
+> sum(np2008)
+[1] 1373.207
